@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.10
 
 //
 // Copyright Amazon.com Inc. or its affiliates.
@@ -30,9 +30,7 @@ let package = Package(
     name: "aws-sdk-swift",
     platforms: [
         .macOS(.v10_15),
-        .iOS(.v13),
-        .tvOS(.v13),
-        .watchOS(.v6)
+        .iOS(.v13)
     ],
     products: [
         .library(name: "AWSClientRuntime", targets: ["AWSClientRuntime"])
@@ -41,7 +39,8 @@ let package = Package(
         .target(
             name: "AWSSDKForSwift",
             path: "Sources/Core/AWSSDKForSwift",
-            exclude: ["Documentation.docc/AWSSDKForSwift.md"]
+            exclude: ["Documentation.docc/AWSSDKForSwift.md"],
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         ),
         .target(
             name: "AWSClientRuntime",
@@ -49,13 +48,15 @@ let package = Package(
             path: "./Sources/Core/AWSClientRuntime",
             resources: [
                 .copy("PrivacyInfo.xcprivacy")
-            ]
+            ],
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         ),
         .testTarget(
             name: "AWSClientRuntimeTests",
             dependencies: [.awsClientRuntime, .clientRuntime, .smithyTestUtils],
             path: "./Tests/Core/AWSClientRuntimeTests",
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
     ]
 )
@@ -69,7 +70,7 @@ func addDependencies(clientRuntimeVersion: Version, crtVersion: Version) {
 }
 
 func addClientRuntimeDependency(_ version: Version) {
-    let smithySwiftURL = "https://github.com/smithy-lang/smithy-swift"
+    let smithySwiftURL = "https://github.com/subdiox/smithy-swift"
     let useLocalDeps = ProcessInfo.processInfo.environment["AWS_SWIFT_SDK_USE_LOCAL_DEPS"] != nil
     let useMainDeps = ProcessInfo.processInfo.environment["AWS_SWIFT_SDK_USE_MAIN_DEPS"] != nil
     switch (useLocalDeps, useMainDeps) {
@@ -92,7 +93,7 @@ func addClientRuntimeDependency(_ version: Version) {
 
 func addCRTDependency(_ version: Version) {
     package.dependencies += [
-        .package(url: "https://github.com/awslabs/aws-crt-swift", exact: version)
+        .package(url: "https://github.com/subdiox/aws-crt-swift", exact: version)
     ]
 }
 
@@ -113,7 +114,8 @@ func addServiceTarget(_ name: String) {
         .target(
             name: name,
             dependencies: [.clientRuntime, .awsClientRuntime, .smithyRetriesAPI, .smithyRetries],
-            path: "./Sources/Services/\(name)"
+            path: "./Sources/Services/\(name)",
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
     ]
 }
@@ -124,7 +126,8 @@ func addServiceUnitTestTarget(_ name: String) {
         .testTarget(
             name: "\(testName)",
             dependencies: [.crt, .clientRuntime, .awsClientRuntime, .byName(name: name), .smithyTestUtils],
-            path: "./Tests/Services/\(testName)"
+            path: "./Tests/Services/\(testName)",
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
     ]
 }
@@ -164,7 +167,8 @@ func addIntegrationTestTarget(_ name: String) {
             dependencies: [.crt, .clientRuntime, .awsClientRuntime, .byName(name: name), .smithyTestUtils] + additionalDependencies.map { Target.Dependency.target(name: $0, condition: nil) },
             path: "./IntegrationTests/Services/\(integrationTestName)",
             exclude: exclusions,
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
     ]
 }
@@ -230,12 +234,14 @@ func addProtocolTests() {
         let target = Target.target(
             name: protocolTest.name,
             dependencies: [.clientRuntime, .awsClientRuntime],
-            path: "\(protocolTest.sourcePath)/swift-codegen/\(protocolTest.name)"
+            path: "\(protocolTest.sourcePath)/swift-codegen/\(protocolTest.name)",
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
         let testTarget = protocolTest.buildOnly ? nil : Target.testTarget(
             name: "\(protocolTest.name)Tests",
             dependencies: [.smithyTestUtils, .byNameItem(name: protocolTest.name, condition: nil)],
-            path: "\(protocolTest.testPath ?? protocolTest.sourcePath)/swift-codegen/\(protocolTest.name)Tests"
+            path: "\(protocolTest.testPath ?? protocolTest.sourcePath)/swift-codegen/\(protocolTest.name)Tests",
+            swiftSettings: [.interoperabilityMode(.Cxx)]
         )
         package.targets += [target, testTarget].compactMap { $0 }
     }
@@ -250,8 +256,8 @@ func addResolvedTargets() {
 // MARK: - Generated
 
 addDependencies(
-    clientRuntimeVersion: "0.49.0",
-    crtVersion: "0.30.0"
+    clientRuntimeVersion: "1.0.0",
+    crtVersion: "1.0.0"
 )
 
 // Uncomment this line to exclude runtime unit tests
